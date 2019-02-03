@@ -1,0 +1,8 @@
+include/config
+include/sdkconfig.h
+build/
+sdkconfig.old
+sdkconfig
+sdkconfig.defaults
+.DS_Store
+partitions.csv
