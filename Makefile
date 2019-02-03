@@ -3,9 +3,17 @@
 # project subdirectory.
 #
 
-PROJECT_NAME := 2outlet
+ifeq ("$(VOICE_ASSISTANT)","gva")
+PROJECT_NAME := gva
+CPPFLAGS += -DGVA
+else ifeq ("$(VOICE_ASSISTANT)","dialogflow")
+PROJECT_NAME := dialogflow
+CPPFLAGS += -DDIALOGFLOW
+else
+PROJECT_NAME := alexa
+CPPFLAGS += -DALEXA
+endif
 
-EXTRA_COMPONENT_DIRS += $(PROJECT_PATH)/../components
+EXTRA_COMPONENT_DIRS += $(PROJECT_PATH)/../../components 
 
 include $(IDF_PATH)/make/project.mk
-

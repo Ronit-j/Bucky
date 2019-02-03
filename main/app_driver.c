@@ -15,15 +15,20 @@
 #include "app_priv.h"
 
 /* This is the button that is used for toggling the output */
+
+//won't work. Trying through command line 
+
 #define BUTTON_GPIO          0
 #define BUTTON_ACTIVE_LEVEL  0
-/* This is the GPIO on which the output will be set */
-#define OUTPUT_GPIO    27
-#define OUTPUT_GPIO2    14
-#define ENABLE_GPIO    12
-#define LEDC_IO_0    (12)
 
-//button can be pressed after five seconds have passed from the previous button press
+/* This are the GPIOs on which the output will be set */
+
+#define INPUT1_MOTOR1    15
+#define INPUT2_MOTOR1    13
+#define INPUT1_MOTOR2    12
+#define INPUT2_MOTOR2    14
+
+//BOOT button can be pressed after five seconds have passed from the previous button press
 #define DEBOUNCE_TIME  500
 
 static bool g_output_state;
@@ -33,95 +38,78 @@ static void push_btn_cb(void* arg)
     uint64_t current = xTaskGetTickCount();
     if ((current - previous) > DEBOUNCE_TIME) {
         printf("BHAI BHAI");
-
         previous = current;
         app_driver_toggle_state();
-
-        vTaskDelay(5);
-
-        
-        //change speed of motor
-        for(int i = 0; i < 5; i++)
-        {
-            printf("INCREASING SPEED NOW");    
-            ledc_set_duty(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_0, 6000+i*500);
-            ledc_update_duty(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_0);
-            vTaskDelay(2000 / portTICK_PERIOD_MS);
-        }
     }
 }
 
-static void configure_push_button(int gpio_num, void (*btn_cb)(void *))
-{
-    button_handle_t btn_handle = iot_button_create(BUTTON_GPIO, BUTTON_ACTIVE_LEVEL);
-    if (btn_handle) {
-        printf("CONFIGURING?");
-        iot_button_set_evt_cb(btn_handle, BUTTON_CB_RELEASE, btn_cb, "RELEASE");
-    }
-}
+// static void configure_push_button(int gpio_num, void (*btn_cb)(void *))
+// {
+//     button_handle_t btn_handle = iot_button_create(BUTTON_GPIO, BUTTON_ACTIVE_LEVEL);
+//     if (btn_handle) {
+//      printf("CONFIGURING?");
+//         iot_button_set_evt_cb(btn_handle, BUTTON_CB_RELEASE, btn_cb, "RELEASE");
+//     }
+// }
 
 static void set_output_state(bool target)
 {
-    gpio_set_level(OUTPUT_GPIO, target);
-    gpio_set_level(OUTPUT_GPIO2, !target);
+    gpio_set_level(INPUT1_MOTOR1, target);
+}
+
+static void set_output_state_motor1(bool level1, bool level2)
+{
+    gpio_set_level(INPUT1_MOTOR1, level1);
+    gpio_set_level(INPUT2_MOTOR1, level2);
+}
+
+static void set_output_state_motor2(bool level1, bool level2)
+{
+    gpio_set_level(INPUT1_MOTOR2, level1);
+    gpio_set_level(INPUT2_MOTOR2, level2);
 }
 
 void app_driver_init()
 {
-    configure_push_button(BUTTON_GPIO, push_btn_cb);
+    // configure_push_button(BUTTON_GPIO, push_btn_cb);
 
-    printf("APP DRIVER INIT");
+   /* Configure output */
 
-    /* Configure output */
-    gpio_config_t io_conf = {
+    //FOR MOTOR 1
+    gpio_config_t io_conf_input1_motor1 = {
         .mode = GPIO_MODE_OUTPUT,
         .pull_up_en = 1,
     };
-    io_conf.pin_bit_mask = ((uint64_t)1 << OUTPUT_GPIO);
+    io_conf_input1_motor1.pin_bit_mask = ((uint64_t)1 << INPUT1_MOTOR1);
 
-    gpio_config_t io_conf2 = {
+    gpio_config_t io_conf_input2_motor1 = {
         .mode = GPIO_MODE_OUTPUT,
         .pull_up_en = 1,
     };
-    io_conf2.pin_bit_mask = ((uint64_t)1 << OUTPUT_GPIO2);
+    io_conf_input2_motor1.pin_bit_mask = ((uint64_t)1 << INPUT2_MOTOR1);
 
-
-    gpio_config_t io_conf3 = {
+    //FOR MOTOR 2
+    gpio_config_t io_conf_input1_motor2 = {
         .mode = GPIO_MODE_OUTPUT,
         .pull_up_en = 1,
     };
-    io_conf3.pin_bit_mask = ((uint64_t)1 << ENABLE_GPIO); 
+    io_conf_input1_motor2.pin_bit_mask = ((uint64_t)1 << INPUT1_MOTOR2);
 
+    gpio_config_t io_conf_input2_motor2 = {
+        .mode = GPIO_MODE_OUTPUT,
+        .pull_up_en = 1,
+    };
+    io_conf_input2_motor2.pin_bit_mask = ((uint64_t)1 << INPUT2_MOTOR2);
 
     /* Configure the GPIO */
-    gpio_config(&io_conf);
-    gpio_config(&io_conf2);
-    gpio_config(&io_conf3);
+    gpio_config(&io_conf_input1_motor1);
+    gpio_config(&io_conf_input2_motor1);
 
-    // gpio_set_level(ENABLE_GPIO, 1);
-    printf("ENABLE_GPIO set");
+    gpio_config(&io_conf_input1_motor2);
+    gpio_config(&io_conf_input2_motor2);
 
-
-    /*
-    Configuring Timer and Channel for PWM signal
-    */
-    ledc_timer_config_t ledc_timer = {
-        .bit_num = LEDC_TIMER_13_BIT,
-        .freq_hz = 5000,
-        .speed_mode = LEDC_HIGH_SPEED_MODE,
-        .timer_num = LEDC_TIMER_0
-    };
-    ledc_timer_config(&ledc_timer);
-
-    ledc_channel_config_t ledc_channel = {
-        .channel = LEDC_CHANNEL_0,
-        .duty = 100,
-        .gpio_num = LEDC_IO_0,
-        .intr_type = LEDC_INTR_DISABLE,
-        .speed_mode = LEDC_HIGH_SPEED_MODE,
-        .timer_sel = LEDC_TIMER_0
-    };
-    ledc_channel_config(&ledc_channel);
+    initialize_motors();
+    // start_motion();
 }
 
 int IRAM_ATTR app_driver_toggle_state(void)
@@ -134,6 +122,79 @@ int IRAM_ATTR app_driver_toggle_state(void)
 
 bool app_driver_get_state(void)
 {
-
+    
     return g_output_state;
+}
+
+void start_motion()
+{
+  move_forward();
+  vTaskDelay(5000/ portTICK_PERIOD_MS);
+  turn_right();
+  vTaskDelay(5000/ portTICK_PERIOD_MS);
+  move_forward();
+  vTaskDelay(5000/ portTICK_PERIOD_MS);
+  turn_left();
+  vTaskDelay(5000/ portTICK_PERIOD_MS);
+  move_backward();
+}
+
+void turn_left()
+{
+    printf("\n\n\nMOVING LEFT\n");
+    // stop();
+    set_output_state_motor1(0,1);
+    set_output_state_motor2(1,0);
+    vTaskDelay(1000/ portTICK_PERIOD_MS);
+    stop();
+    printf("\nDONE MOVING LEFT");
+}
+
+void turn_right()
+{
+    printf("\n\nMOVING RIGHT");
+    // stop();
+    set_output_state_motor1(1,0);
+    set_output_state_motor2(0,1);
+    vTaskDelay(1000/ portTICK_PERIOD_MS);
+    stop();
+    printf("\n\nDONE MOVING RIGHT");
+}
+
+void move_forward()
+{
+    printf("\n\nMOVING FORWARD");
+    // stop();
+    set_output_state_motor1(1,0);
+    set_output_state_motor2(1,0);
+
+    vTaskDelay(10000/ portTICK_PERIOD_MS);
+    stop();
+    printf("\nDONE MOVING FORWARD");
+}
+
+void move_backward()
+{
+    printf("\n\nMOVING BACK");
+    // stop();
+    set_output_state_motor1(0,1);
+    set_output_state_motor2(0,1);
+
+    vTaskDelay(10000/ portTICK_PERIOD_MS);
+    stop();
+    printf("\nDONE MOVING BACK");
+}
+
+void stop()
+{
+    printf("\nSTOPPING");
+    set_output_state_motor1(0,0);
+    set_output_state_motor2(0,0);
+}
+
+void initialize_motors()
+{
+    set_output_state_motor1(0,0);
+    set_output_state_motor2(0,0);
+    stop();
 }
