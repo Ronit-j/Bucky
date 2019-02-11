@@ -128,18 +128,18 @@ bool app_driver_get_state(void)
 
 void start_motion()
 {
-  move_forward();
+  move_forward(NULL);
   vTaskDelay(5000/ portTICK_PERIOD_MS);
-  turn_right();
+  turn_right(NULL);
   vTaskDelay(5000/ portTICK_PERIOD_MS);
-  move_forward();
+  move_forward(NULL);
   vTaskDelay(5000/ portTICK_PERIOD_MS);
-  turn_left();
+  turn_left(NULL);
   vTaskDelay(5000/ portTICK_PERIOD_MS);
-  move_backward();
+  move_backward(NULL);
 }
 
-void turn_left()
+void* turn_left(void *arg)
 {
     printf("\n\n\nMOVING LEFT\n");
     // stop();
@@ -148,9 +148,10 @@ void turn_left()
     vTaskDelay(1000/ portTICK_PERIOD_MS);
     stop();
     printf("\nDONE MOVING LEFT");
+    return NULL;
 }
 
-void turn_right()
+void* turn_right(void *arg)
 {
     printf("\n\nMOVING RIGHT");
     // stop();
@@ -159,9 +160,10 @@ void turn_right()
     vTaskDelay(1000/ portTICK_PERIOD_MS);
     stop();
     printf("\n\nDONE MOVING RIGHT");
+    return NULL;
 }
 
-void move_forward()
+void* move_forward(void *arg)
 {
     printf("\n\nMOVING FORWARD");
     // stop();
@@ -171,9 +173,10 @@ void move_forward()
     vTaskDelay(10000/ portTICK_PERIOD_MS);
     stop();
     printf("\nDONE MOVING FORWARD");
+    return NULL;
 }
 
-void move_backward()
+void* move_backward(void *arg)
 {
     printf("\n\nMOVING BACK");
     // stop();
@@ -183,6 +186,7 @@ void move_backward()
     vTaskDelay(10000/ portTICK_PERIOD_MS);
     stop();
     printf("\nDONE MOVING BACK");
+    return NULL;
 }
 
 void stop()

@@ -12,6 +12,7 @@
 #include <freertos/semphr.h>
 #include <freertos/task.h>
 #include <iot_button.h>
+#include <pthread.h>
 
 #include "app_priv.h"
 #include "../../../components/misc/va_diag_cli.h"
@@ -187,21 +188,29 @@ void dialogflow_app_response_data(Google__Cloud__Dialogflow__V2beta1__StreamingD
                 case GOOGLE__PROTOBUF__VALUE__KIND_STRING_VALUE:
                     printf("[%d] %s : %s\n", i, entities->fields[i]->key, entities->fields[i]->value->string_value);
                     if(!strcmp(entities->fields[i]->value->string_value , "forward"))
-                    {   move_forward();
+                    {   
+                    	pthread_t thread_id;
+                    	pthread_create(&thread_id, NULL, move_forward, NULL);
                         printf("\n%s",entities->fields[i]->value->string_value);
 
                         printf("MATCHED MOVING FORWARD");
                     }
                     else if(!strcmp(entities->fields[i]->value->string_value , "backward"))
-                    {    move_backward();
+                    {    
+                    	pthread_t thread_id;
+                    	pthread_create(&thread_id, NULL, move_backward, NULL);
                         printf("MATCHED MOVING BACKWARD");
                     }
                     else if(!strcmp(entities->fields[i]->value->string_value , "left"))
-                    {    turn_left();
+                    {    
+                    	pthread_t thread_id;
+                    	pthread_create(&thread_id, NULL, turn_left, NULL);
                         printf("MATCHED TURNING LEFT");
                     }
                     else if(!strcmp(entities->fields[i]->value->string_value , "right"))
-                    {    turn_right();
+                    {    
+                    	pthread_t thread_id;
+                    	pthread_create(&thread_id, NULL, turn_right, NULL);
                         printf("MATCHED TURNING RIGHT");
                     }
                     else if(!strcmp(entities->fields[i]->value->string_value , "stop"))
