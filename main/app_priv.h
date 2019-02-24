@@ -11,10 +11,10 @@ void app_driver_init(void);
 int app_driver_toggle_state(void);
 bool app_driver_get_state(void);
 
+void turn_left();
+void turn_right();
+void move_forward();
+void move_backward();
 void start_motion();
-void* move_forward(void *);
-void* move_backward(void *);
-void* turn_left(void *);
-void* turn_right(void *);
 void initialize_motors();
 void stop();
