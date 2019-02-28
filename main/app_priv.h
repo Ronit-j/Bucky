@@ -18,3 +18,4 @@ void move_backward();
 void start_motion();
 void initialize_motors();
 void stop();
+void stop_if_obstacle();

@@ -227,10 +227,10 @@ void *pcnt_initialize(void *arg)
          */
         // res = xQueueReceive(pcnt_evt_queue, &evt, 10 / portTICK_PERIOD_MS);
         vTaskDelay(10/portTICK_PERIOD_MS);
-            pcnt_get_counter_value(PCNT_UNIT_LEFT, &count);
-            printf("Current left counter value :%d\n", count);
-            pcnt_get_counter_value(PCNT_UNIT_RIGHT, &count);
-            printf("Current right counter value :%d\n", count);
+        pcnt_get_counter_value(PCNT_UNIT_LEFT, &count);
+        printf("Current left counter value :%d\n", count);
+        pcnt_get_counter_value(PCNT_UNIT_RIGHT, &count);
+        printf("Current right counter value :%d\n", count);
         
     }
     if(user_isr_handle) {

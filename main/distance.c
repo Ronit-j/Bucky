@@ -71,7 +71,7 @@ void HCSR04_rx_init()
 double get_obstacle_distance()
 {
 	double temp_distance = distance;
-	return temp_distance;
+	return temp_distance*100;
 }
 
 //to be called using a thread

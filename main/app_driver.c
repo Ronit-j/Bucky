@@ -220,7 +220,7 @@ bool app_driver_get_state(void)
 void start_motion()
 {
   move_forward(500);
-  vTaskDelay(5000/ portTICK_PERIOD_MS);
+  // vTaskDelay(5000/ portTICK_PERIOD_MS);
   // turn_right();
   // vTaskDelay(5000/ portTICK_PERIOD_MS);
   // move_forward(50);
@@ -232,19 +232,19 @@ void start_motion()
 
 void turn_left()
 {
-	printf("\n\n\nMOVING LEFT\n");
+    printf("\n\n\nMOVING LEFT\n");
     // stop();
     set_output_state_motor1(0,1);
     set_output_state_motor2(1,0);
 
     while(1)
     {
-    	if(get_count_left() == 20)
-    	{
-    		printf("Reached 20 LEFT\n\n");
-    		stop();
-    		break;
-    	}
+        if(get_count_left() == 20)
+        {
+            printf("Reached 20 LEFT\n\n");
+            stop();
+            break;
+        }
     }
     //vTaskDelay(5000/ portTICK_PERIOD_MS);
     //stop();
@@ -253,19 +253,19 @@ void turn_left()
 
 void turn_right()
 {
-	printf("\n\nMOVING RIGHT");
+    printf("\n\nMOVING RIGHT");
     
     set_output_state_motor1(1,0);
     set_output_state_motor2(0,1);
 
     while(1)
     {
-    	if(get_count_right() == 20)
-    	{
-    		printf("Reached 20 RIGHT\n\n");
-    		stop();
-    		break;
-    	}
+        if(get_count_right() == 20)
+        {
+            printf("Reached 20 RIGHT\n\n");
+            stop();
+            break;
+        }
     }
 
     // vTaskDelay(5000/ portTICK_PERIOD_MS);
@@ -276,8 +276,8 @@ void turn_right()
 void move_forward(int distance_in_cm)
 {
     //20ticks = 20CM for the robot wheels i.e. 1 Pulse = 1 CM
-
-	printf("\n\nMOVING FORWARD");
+    bool obstacle = false;
+    printf("\n\nMOVING FORWARD");
     // stop();
     set_output_state_motor1(1,0);
     set_output_state_motor2(1,0);
@@ -293,8 +293,15 @@ void move_forward(int distance_in_cm)
         //for stopping if obstacle is closer than the limit
         if(get_obstacle_distance() <= OBSTACLE_DISTANCE_LIMIT && get_obstacle_distance() != 0)
         {
-            stop();
-            break;
+            stop_if_obstacle();
+            obstacle = true;
+        }
+
+        if(obstacle == true && get_obstacle_distance() > OBSTACLE_DISTANCE_LIMIT)
+        {
+            set_output_state_motor1(1,0);
+            set_output_state_motor2(1,0);
+            obstacle = false;
         }
     }
 
@@ -305,7 +312,7 @@ void move_forward(int distance_in_cm)
 
 void move_backward(int distance_in_cm)
 {
-	printf("\n\nMOVING BACK");
+    printf("\n\nMOVING BACK");
     // stop();
     set_output_state_motor1(0,1);
     set_output_state_motor2(0,1);
@@ -326,7 +333,7 @@ void move_backward(int distance_in_cm)
 
 void stop()
 {
-	printf("\nSTOPPING");
+    printf("\nSTOPPING");
     set_output_state_motor1(0,0);
     set_output_state_motor2(0,0);
     vTaskDelay(500/ portTICK_PERIOD_MS);
@@ -338,4 +345,12 @@ void initialize_motors()
     set_output_state_motor1(0,0);
     set_output_state_motor2(0,0);
     stop();
+}
+
+void stop_if_obstacle()
+{
+    printf("\nSTOPPING");
+    set_output_state_motor1(0,0);
+    set_output_state_motor2(0,0);
+    vTaskDelay(500/ portTICK_PERIOD_MS);
 }
