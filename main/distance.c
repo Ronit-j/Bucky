@@ -27,6 +27,7 @@
 #define PIN_ECHO 23
 
 double distance = 0;
+bool driver_installed = false;
 
 /*
 *  Initialize the Transmitter channel
@@ -55,6 +56,7 @@ void HCSR04_tx_init()
 */
 void HCSR04_rx_init()
 {
+	printf("\nINITIATING RX Driver\n");
 	rmt_config_t rmt_rx;
 	rmt_rx.channel = RMT_RX_CHANNEL;
 	rmt_rx.gpio_num = RMT_RX_GPIO_NUM;
@@ -65,17 +67,25 @@ void HCSR04_rx_init()
 	rmt_rx.rx_config.filter_ticks_thresh = 100;
 	rmt_rx.rx_config.idle_threshold = rmt_item32_tIMEOUT_US / 10 * (RMT_TICK_10_US);
 	rmt_config(&rmt_rx);
-	rmt_driver_install(rmt_rx.channel, 1000, 0);
+	rmt_driver_install(rmt_rx.channel, 2000, 0);
 }
 
+// don't know if works or not
+void uninstall_driver()
+{
+	rmt_driver_uninstall(RMT_RX_CHANNEL);
+	driver_installed = false;
+}
+
+/* Get the current distance as measured by the ultrasonic sensor */
 double get_obstacle_distance()
 {
 	double temp_distance = distance;
-	return temp_distance*100;
+	return temp_distance*100;				//as distance is in meters
 }
 
-//to be called using a thread
-void* start_measuring_distance(void *arg)
+
+void start_measuring_distance(void *arg)
 {
 	HCSR04_tx_init();
 	HCSR04_rx_init();
@@ -92,6 +102,8 @@ void* start_measuring_distance(void *arg)
 	rmt_get_ringbuf_handle(RMT_RX_CHANNEL, &rb);
 	rmt_rx_start(RMT_RX_CHANNEL, 1);
 
+	int buffer_reset_count = 0;
+
 	while(1)
 	{
 		//write to TRIGGER pin so that it generates waves and sends it
@@ -99,12 +111,44 @@ void* start_measuring_distance(void *arg)
 		rmt_wait_tx_done(RMT_TX_CHANNEL, portMAX_DELAY);
 
 		//read from ECHO pin, whose data is received in Ring buffer
-		rmt_item32_t* item = (rmt_item32_t*)xRingbufferReceive(rb, &rx_size, 1000);
+		rmt_item32_t* item = (rmt_item32_t*)xRingbufferReceive(rb, &rx_size, portMAX_DELAY);
 		distance = 340.29 * ITEM_DURATION(item->duration0) / (1000 * 1000 * 2); // distance in meters
-		printf("Distance is %f cm\n", distance * 100); // distance in centimeters
+		printf("###################################################Distance is %f cm\n", distance * 100); // distance in centimeters
 
 		vRingbufferReturnItem(rb, (void*) item);
-		vTaskDelay(200 / portTICK_PERIOD_MS);
+		vTaskDelay(500 / portTICK_PERIOD_MS);
+
+		buffer_reset_count++;
+		printf("\n\n#############INCREMENTING BUFFER%d",buffer_reset_count);
+		printf("\n###########CURRENT FREE SIZE = \t%d\n", xRingbufferGetCurFreeSize(rb));
+
+		// We tried Deleting the buffer but it FAILED
+		// if(xRingbufferGetCurFreeSize(rb) < 20)
+		// {
+		// 	printf("\n$$$$$$$#######$$$$$$$$DELETING RING BUFFER\n");
+		// 	rmt_rx_stop(RMT_RX_CHANNEL);
+		// 	vRingbufferDelete(rb);
+		// 	// uninstall_driver();
+
+		// 	HCSR04_rx_init();
+		// 	rmt_rx_start(RMT_RX_CHANNEL, 1);
+		// }
+
+		// printf("\n###########CURRENT MAX ITEM SIZE = \t%d\n", xRingbufferGetMaxItemSize(rb));
+		if(buffer_reset_count > 100)
+		{	
+			//This was the code to reset the remote peripheral, but the thread stopped after that
+
+			// periph_module_reset(PERIPH_RMT_MODULE);
+			// // rmt_config(&rmt_rx);
+			// // rmt_rx_start(rmt_rx.channel, 1);
+			// HCSR04_rx_init();
+			// rmt_get_ringbuf_handle(RMT_RX_CHANNEL, &rb);
+			// rmt_rx_start(RMT_RX_CHANNEL, 1);
+
+			// printf("\n\n\n#######################################################RESETTING RX CHANNEL\n\n\n");
+			// buffer_reset_count = 0;
+		}
 	}
 
 }

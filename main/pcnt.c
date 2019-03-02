@@ -226,7 +226,7 @@ void *pcnt_initialize(void *arg)
          * Once received, decode the event type and print it on the serial monitor.
          */
         // res = xQueueReceive(pcnt_evt_queue, &evt, 10 / portTICK_PERIOD_MS);
-        vTaskDelay(10/portTICK_PERIOD_MS);
+        vTaskDelay(500/portTICK_PERIOD_MS);
         pcnt_get_counter_value(PCNT_UNIT_LEFT, &count);
         printf("Current left counter value :%d\n", count);
         pcnt_get_counter_value(PCNT_UNIT_RIGHT, &count);

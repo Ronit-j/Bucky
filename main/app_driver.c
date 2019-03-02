@@ -12,30 +12,34 @@
 #include <freertos/task.h>
 #include <iot_button.h>
 #include "driver/ledc.h"
+#include <pthread.h>
 
 #include "app_priv.h"
 #include "pcnt.h"
 #include "distance.h"
 
 /* This is the button that is used for toggling the output */
+// both unused
 #define BUTTON_GPIO          0
 #define BUTTON_ACTIVE_LEVEL  0
-/* This is the GPIO on which the output will be set */
+
+/* This are the GPIOs for Motor Inputs */
 #define INPUT1_MOTOR1    27
 #define INPUT2_MOTOR1    14
 #define INPUT1_MOTOR2    16
 #define INPUT2_MOTOR2    17
 
-#define OBSTACLE_DISTANCE_LIMIT 20.00
+/* Minimum distance that an object can be before the robot stops movement */
+#define OBSTACLE_DISTANCE_LIMIT 30.00
 
-
-//PWM
+/* GPIOs for Enable and PWM signal (Not used currently) */
 #define ENABLE_MOTOR1    26
 #define ENABLE_MOTOR2    5
 // #define LEDC_MOTOR1    (26)
 // #define LEDC_MOTOR2    (5)
 
 //button can be pressed after five seconds have passed from the previous button press
+//unused
 #define DEBOUNCE_TIME  500
 
 static bool g_output_state;
@@ -76,29 +80,7 @@ static void configure_push_button(int gpio_num, void (*btn_cb)(void *))
 static void set_output_state_motor1(bool level1, bool level2)
 {
     gpio_set_level(INPUT1_MOTOR1, level1);
-    // if(level1 == 1)
-    // {
-    //     //change speed of motor
-    //     for(int i = 0; i < 5; i++)
-    //     {
-    //         printf("\nINCREASING SPEED NOW");
-    //         ledc_set_duty(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_0, 6000+i*500);
-    //         ledc_update_duty(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_0);
-    //         vTaskDelay(2000 / portTICK_PERIOD_MS);
-    //     }
-    // }
     gpio_set_level(INPUT2_MOTOR1, level2);
-    // if(level2 == 1)
-    // {
-    //     //change speed of motor
-    //     for(int i = 0; i < 5; i++)
-    //     {
-    //         printf("\nINCREASING SPEED NOW");
-    //         ledc_set_duty(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_0, 6000+i*500);
-    //         ledc_update_duty(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_0);
-    //         vTaskDelay(2000 / portTICK_PERIOD_MS);
-    //     }
-    // }
 }
 
 static void set_output_state_motor2(bool level1, bool level2)
@@ -201,7 +183,7 @@ void app_driver_init()
     gpio_set_level(ENABLE_MOTOR2, 1);
 
     initialize_motors();
-    start_motion();
+    // start_motion();
 }
 
 int IRAM_ATTR app_driver_toggle_state(void)
@@ -215,19 +197,6 @@ int IRAM_ATTR app_driver_toggle_state(void)
 bool app_driver_get_state(void)
 {
     return g_output_state;
-}
-
-void start_motion()
-{
-  move_forward(500);
-  // vTaskDelay(5000/ portTICK_PERIOD_MS);
-  // turn_right();
-  // vTaskDelay(5000/ portTICK_PERIOD_MS);
-  // move_forward(50);
-  // vTaskDelay(5000/ portTICK_PERIOD_MS);
-  // turn_left();
-  // vTaskDelay(5000/ portTICK_PERIOD_MS);
-  // move_backward(100);
 }
 
 void turn_left()
@@ -246,8 +215,7 @@ void turn_left()
             break;
         }
     }
-    //vTaskDelay(5000/ portTICK_PERIOD_MS);
-    //stop();
+
     printf("\nDONE MOVING LEFT");
 }
 
@@ -268,8 +236,6 @@ void turn_right()
         }
     }
 
-    // vTaskDelay(5000/ portTICK_PERIOD_MS);
-    // stop();
     printf("\n\nDONE MOVING RIGHT");
 }
 
@@ -278,26 +244,29 @@ void move_forward(int distance_in_cm)
     //20ticks = 20CM for the robot wheels i.e. 1 Pulse = 1 CM
     bool obstacle = false;
     printf("\n\nMOVING FORWARD");
-    // stop();
+    
     set_output_state_motor1(1,0);
     set_output_state_motor2(1,0);
+    
     while(1)
     {
+    	//for moving upto the specified distance
         if(get_count_right() >= distance_in_cm && get_count_left() >= distance_in_cm)
         {
             stop();
             break;
         }
 
-        printf("\nOBSTACLE_DISTANCE = %f", get_obstacle_distance());
         //for stopping if obstacle is closer than the limit
         if(get_obstacle_distance() <= OBSTACLE_DISTANCE_LIMIT && get_obstacle_distance() != 0)
         {
             stop_if_obstacle();
+            printf("Obstacle in Front \n");
             obstacle = true;
         }
 
-        if(obstacle == true && get_obstacle_distance() > OBSTACLE_DISTANCE_LIMIT)
+        //if obstacle goes away, then resume the movement
+        if(obstacle == true && ( get_obstacle_distance() > OBSTACLE_DISTANCE_LIMIT || get_obstacle_distance() == 0) )
         {
             set_output_state_motor1(1,0);
             set_output_state_motor2(1,0);
@@ -305,15 +274,13 @@ void move_forward(int distance_in_cm)
         }
     }
 
-    // vTaskDelay(5000/ portTICK_PERIOD_MS);
-    // stop();
     printf("\nDONE MOVING FORWARD");
 }
 
 void move_backward(int distance_in_cm)
 {
     printf("\n\nMOVING BACK");
-    // stop();
+    
     set_output_state_motor1(0,1);
     set_output_state_motor2(0,1);
 
@@ -326,8 +293,6 @@ void move_backward(int distance_in_cm)
         }
     }
 
-    // vTaskDelay(5000/ portTICK_PERIOD_MS);
-    // stop();
     printf("\nDONE MOVING BACK");
 }
 
@@ -340,6 +305,8 @@ void stop()
     reset_counters();
 }
 
+
+/* Initializes the motors */
 void initialize_motors()
 {
     set_output_state_motor1(0,0);
@@ -352,5 +319,5 @@ void stop_if_obstacle()
     printf("\nSTOPPING");
     set_output_state_motor1(0,0);
     set_output_state_motor2(0,0);
-    vTaskDelay(500/ portTICK_PERIOD_MS);
+    
 }
